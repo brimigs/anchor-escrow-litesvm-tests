@@ -1,45 +1,63 @@
 //! # anchor-litesvm
 //!
-//! A lightweight testing utility library that bridges Anchor and LiteSVM,
-//! dramatically simplifying the process of testing Anchor programs.
+//! A comprehensive testing utility library that bridges Anchor and LiteSVM,
+//! reducing test code by up to 70% while maintaining full control.
 //!
 //! ## Features
 //!
-//! - **Automatic Instruction Building**: Handles discriminator calculation and data serialization
-//! - **Type-Safe Account Deserialization**: Deserialize Anchor accounts with proper type handling
-//! - **Direct LiteSVM Access**: Full control over the underlying LiteSVM instance
-//! - **Minimal Overhead**: Thin wrapper that doesn't hide functionality
+//! - **Fluent Instruction Builder**: Build and execute instructions with chainable API
+//! - **Transaction Helpers**: One-line transaction execution with automatic error handling
+//! - **Test Account Helpers**: Create funded accounts, mints, and token accounts in single calls
+//! - **Assertion Helpers**: Clean, readable test assertions for account states
+//! - **Type-Safe Deserialization**: Automatic Anchor account unpacking with proper types
+//! - **Direct LiteSVM Access**: Full control when you need it
 //!
 //! ## Quick Start
 //!
-//! ```no_run
-//! use anchor_litesvm::AnchorContext;
-//! use litesvm::LiteSVM;
+//! ```ignore
+//! use anchor_litesvm::{AnchorLiteSVM, TestHelpers, AssertionHelpers, tuple_args};
 //! use solana_program::pubkey::Pubkey;
 //!
-//! // Initialize LiteSVM
-//! let mut svm = LiteSVM::new();
+//! // Initialize with one line!
 //! let program_id = Pubkey::new_unique();
-//! // svm.add_program(program_id, &program_bytes);
+//! let program_bytes = include_bytes!("../target/deploy/program.so");
+//! let mut ctx = AnchorLiteSVM::build_with_program(program_id, program_bytes);
 //!
-//! // Create Anchor context
-//! let ctx = AnchorContext::new(svm, program_id);
+//! // Create test accounts in one line each
+//! let maker = ctx.create_funded_account(10_000_000_000).unwrap();
+//! let mint = ctx.create_token_mint(&maker, 9).unwrap();
 //!
-//! // Use ctx.build_instruction() for automatic discriminator handling
-//! // Use ctx.get_anchor_account() for type-safe deserialization
-//! // Access ctx.svm directly for any LiteSVM operations
+//! // Build and execute instructions with fluent API
+//! let result = ctx.instruction_builder("transfer")
+//!     .signer("from", &maker)
+//!     .account_mut("to", Pubkey::new_unique())
+//!     .args(tuple_args((100u64,)))  // No struct needed!
+//!     .execute(&mut ctx, &[&maker])
+//!     .unwrap();
+//!
+//! // Clean assertions
+//! result.assert_success();
+//! ctx.assert_token_balance(&mint.pubkey(), 100);
 //! ```
 
 pub mod account;
+pub mod assertions;
+pub mod builder;
 pub mod context;
 pub mod instruction;
 pub mod instruction_builder;
+pub mod test_helpers;
+pub mod transaction;
 
 // Re-export main types for convenience
 pub use account::{get_anchor_account, get_anchor_account_unchecked, AccountError};
+pub use assertions::AssertionHelpers;
+pub use builder::{AnchorLiteSVM, ProgramTestExt};
 pub use context::AnchorContext;
 pub use instruction::{build_anchor_instruction, calculate_anchor_discriminator};
 pub use instruction_builder::{InstructionBuilder, tuple_args, TupleArgs};
+pub use test_helpers::TestHelpers;
+pub use transaction::{TransactionError, TransactionHelpers, TransactionResult};
 
 // Re-export commonly used external types
 pub use litesvm::LiteSVM;

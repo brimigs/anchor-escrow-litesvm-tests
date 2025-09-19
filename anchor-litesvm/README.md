@@ -14,9 +14,23 @@ Testing Anchor programs with LiteSVM currently requires significant boilerplate:
 
 `anchor-litesvm` provides a minimal wrapper around LiteSVM that handles Anchor-specific patterns, reducing test code by 60-70% while maintaining full control and flexibility.
 
-## MVP Features (Current)
+## Quick Start
 
-### 1. Automatic Instruction Building
+```rust
+use anchor_litesvm::AnchorLiteSVM;
+
+// Before: 5 lines of boilerplate
+// After: 1 line!
+let mut ctx = AnchorLiteSVM::build_with_program(program_id, program_bytes);
+
+// Everything else just works
+let account = ctx.create_funded_account(10_000_000_000)?;
+let mint = ctx.create_token_mint(&account, 9)?;
+```
+
+## Features
+
+### 1. Fluent Instruction Builder with Direct Execution
 Eliminates ~15 lines of boilerplate per instruction:
 
 ```rust
@@ -39,11 +53,21 @@ let instruction = Instruction {
 };
 
 // After (with anchor-litesvm):
+// Option 1: Build instruction
 let ix = ctx.build_instruction(
     "make",
     accounts,
     MakeArgs { seed, receive, amount }
 );
+
+// Option 2: Build and execute in one call!
+let result = ctx.instruction_builder("make")
+    .signer("maker", &maker)
+    .account_mut("escrow", escrow_pda)
+    .account("mint_a", mint_a)
+    .system_program()
+    .args(tuple_args((seed, receive, amount)))  // No struct needed!
+    .execute(&mut ctx, &[&maker])?;
 ```
 
 ### 2. Type-Safe Account Deserialization
@@ -58,7 +82,90 @@ let escrow: EscrowState = EscrowState::try_from_slice(&account_data.data[8..]).u
 let escrow: EscrowState = ctx.get_anchor_account(&escrow_pda)?;
 ```
 
-### 3. Direct LiteSVM Access
+### 3. Transaction Execution Helpers
+
+Simplified transaction execution:
+
+```rust
+// Execute single instruction
+let result = ctx.send_instruction(ix, &[&signer])?;
+result.assert_success();
+
+// Execute multiple instructions
+let result = ctx.send_instructions(&[ix1, ix2], &[&signer])?;
+
+// Build and execute in one call
+let result = ctx.execute("transfer", accounts, args, &[&signer])?;
+
+// Transaction result helpers
+assert!(result.has_log("Transfer complete"));
+println!("Used {} compute units", result.compute_units());
+```
+
+### 4. Test Account Helpers
+
+Streamlined account creation for tests:
+
+```rust
+// Create funded account
+let maker = ctx.create_funded_account(10_000_000_000)?;
+
+// Create multiple accounts
+let accounts = ctx.create_funded_accounts(5, 1_000_000_000)?;
+
+// Create token mint
+let mint = ctx.create_token_mint(&authority, 9)?;
+
+// Create token account and mint tokens
+let ata = ctx.create_token_account(
+    &owner,
+    &mint.pubkey(),
+    Some((1_000_000_000, &mint_authority))  // Optional: mint tokens
+)?;
+
+// Batch airdrop
+ctx.batch_airdrop(&[&account1, &account2], 1_000_000_000)?;
+```
+
+### 5. Assertion Helpers
+
+Clean test assertions:
+
+```rust
+// Account assertions
+ctx.assert_account_exists(&pda);
+ctx.assert_account_closed(&old_account);
+ctx.assert_accounts_closed(&[&escrow, &vault]);
+
+// Token balance assertions
+ctx.assert_token_balance(&ata, 1_000_000_000);
+ctx.assert_token_balance_with_msg(&ata, expected, "Should have 1000 tokens");
+
+// Lamports and owner assertions
+ctx.assert_account_lamports(&account, 5_000_000_000);
+ctx.assert_account_owner(&token_account, &spl_token::id());
+```
+
+### 6. Simplified Test Setup
+
+Multiple ways to initialize your test environment:
+
+```rust
+// Simplest - one line setup
+let mut ctx = AnchorLiteSVM::build_with_program(program_id, program_bytes);
+
+// Builder pattern for multiple programs
+let mut ctx = AnchorLiteSVM::new()
+    .deploy_program(program1_id, program1_bytes)
+    .deploy_program(program2_id, program2_bytes)
+    .build();
+
+// Extension trait on Pubkey
+use anchor_litesvm::ProgramTestExt;
+let mut ctx = PROGRAM_ID.test_with(program_bytes);
+```
+
+### 7. Direct LiteSVM Access
 The `AnchorContext` provides full access to the underlying LiteSVM instance:
 
 ```rust
@@ -68,82 +175,134 @@ ctx.svm.airdrop(&pubkey, amount);
 ctx.svm.send_transaction(tx);
 ```
 
-## Usage Example
+## Complete Example
+
+```rust
+use anchor_litesvm::{
+    AnchorLiteSVM, TestHelpers, AssertionHelpers, tuple_args
+};
+
+#[test]
+fn test_escrow_with_helpers() {
+    // Setup - just one line!
+    let mut ctx = AnchorLiteSVM::build_with_program(program_id, program_bytes);
+
+    // Create accounts - one line each!
+    let maker = ctx.create_funded_account(10_000_000_000)?;
+    let mint_a = ctx.create_token_mint(&maker, 9)?;
+    let maker_ata = ctx.create_token_account(
+        &maker,
+        &mint_a.pubkey(),
+        Some((1_000_000_000, &maker))  // Mint 1000 tokens
+    )?;
+
+    // Execute instruction - fluent API with direct execution
+    let result = ctx.instruction_builder("make")
+        .signer("maker", &maker)
+        .account_mut("escrow", escrow_pda)
+        .account("mint_a", mint_a.pubkey())
+        .system_program()
+        .args(tuple_args((seed, amount)))  // No struct definition needed!
+        .execute(&mut ctx, &[&maker])?;
+
+    // Verify results
+    result.assert_success();
+    ctx.assert_account_exists(&escrow_pda);
+    ctx.assert_token_balance(&vault, 1_000_000_000);
+}
+```
+
+## Before/After Comparison
 
 ```rust
 use anchor_litesvm::AnchorContext;
 use litesvm::LiteSVM;
 
-#[test]
-fn test_anchor_program() {
-    // Initialize LiteSVM as normal
-    let mut svm = LiteSVM::new();
-    svm.add_program(program_id, program_bytes);
+### Before: Raw LiteSVM (~50 lines for basic test)
+```rust
+// Create mint - multiple transactions
+let mint = Keypair::new();
+let rent = svm.minimum_balance_for_rent_exemption(82);
+let create_mint_ix = system_instruction::create_account(...);
+let init_mint_ix = spl_token::instruction::initialize_mint(...);
+let tx = Transaction::new_signed_with_payer(&[create_mint_ix, init_mint_ix], ...);
+svm.send_transaction(tx)?;
 
-    // Create Anchor context
-    let ctx = AnchorContext::new(svm, program_id);
+// Create ATA - another transaction
+let create_ata_ix = create_associated_token_account(...);
+let tx = Transaction::new_signed_with_payer(&[create_ata_ix], ...);
+svm.send_transaction(tx)?;
 
-    // Build instruction with automatic discriminator
-    let ix = ctx.build_instruction(
-        "initialize",
-        vec![
-            AccountMeta::new(user.pubkey(), true),
-            AccountMeta::new(state_pda, false),
-        ],
-        InitializeArgs { amount: 100 }
-    )?;
+// Mint tokens - yet another transaction
+let mint_to_ix = mint_to(...);
+let tx = Transaction::new_signed_with_payer(&[mint_to_ix], ...);
+svm.send_transaction(tx)?;
 
-    // Send transaction using LiteSVM
-    let tx = Transaction::new_signed_with_payer(
-        &[ix],
-        Some(&user.pubkey()),
-        &[&user],
-        ctx.svm.latest_blockhash(),
-    );
-    ctx.svm.send_transaction(tx)?;
+// Execute instruction - manual everything
+let discriminator = // 8 lines of SHA256 hashing
+let accounts = vec![ // 10+ lines of AccountMeta
+let ix = Instruction { ... };
+let tx = Transaction::new_signed_with_payer(...);
+let result = svm.send_transaction(tx)?;
 
-    // Deserialize Anchor account
-    let state: StateAccount = ctx.get_anchor_account(&state_pda)?;
-    assert_eq!(state.amount, 100);
-}
+// Manual assertions
+let account = svm.get_account(&pda).unwrap();
+assert!(account.lamports > 0);
+let token_account = unpack(&account.data)?;
+assert_eq!(token_account.amount, expected);
+```
+
+### After: With anchor-litesvm (~10 lines)
+```rust
+// Initialize with one line
+let mut ctx = AnchorLiteSVM::build_with_program(program_id, program_bytes);
+
+// Create everything in one line each
+let maker = ctx.create_funded_account(10_000_000_000)?;
+let mint = ctx.create_token_mint(&maker, 9)?;
+let ata = ctx.create_token_account(&maker, &mint.pubkey(), Some((1000, &maker)))?;
+
+// Execute with fluent API
+let result = ctx.instruction_builder("make")
+    .signer("maker", &maker)
+    .account_mut("escrow", escrow_pda)
+    .args(tuple_args((seed, amount)))
+    .execute(&mut ctx, &[&maker])?;
+
+// Clean assertions
+result.assert_success();
+ctx.assert_token_balance(&vault, 1000);
+```
 ```
 
 ## Roadmap
 
-### Phase 1: MVP (Current)
+### Phase 1: Core Features (Complete)
 - Automatic instruction discriminator calculation
 - Instruction data serialization with Borsh
 - Type-safe account deserialization
-- Simple context wrapper maintaining LiteSVM access
+- PDA calculation helpers
+- Direct LiteSVM access
 
-### Phase 2: Enhanced Instruction Building (In Progress)
-- [ ] Fluent instruction builder API
-- [ ] Simplified account building with automatic AccountMeta
-- [ ] Tuple arguments support (no struct definition needed)
+### Phase 2: Enhanced Builder & Helpers (Complete)
+- Fluent instruction builder API
+- Tuple arguments support (no struct definition needed)
+- Direct execution from builder (`.execute()`)
+- Transaction execution helpers (`send_instruction`, `send_instructions`)
+- Test account helpers (`create_funded_account`, `create_token_mint`, etc.)
+- Assertion helpers for cleaner tests
+- Transaction result wrapper with utilities
+
+### Phase 2.5: Future Enhancements
+
+### Phase 3: Advanced Features (In Progress)
 - [ ] IDL file parsing for automatic account resolution
-- [ ] Automatic signer detection
-- [ ] Better error messages with context
-
-### Phase 2.5: Transaction Execution Helpers
-- [ ] `send_instruction()` - Single line transaction execution
-- [ ] `send_instructions()` - Multiple instructions in one transaction
-- [ ] `execute()` - Combined build and send
-- [ ] `create_funded_keypair()` - Test account helper
-- [ ] Automatic payer detection from signers
-
-### Phase 3: Testing Utilities
-- [ ] PDA derivation helpers matching Anchor patterns
-- [ ] Account state assertions
-- [ ] Transaction result parsing
-- [ ] Event emission testing
-
-### Phase 4: Advanced Features
-- [ ] Program deployment from source
-- [ ] Workspace management for multi-program testing
+- [ ] Automatic signer detection from account types
+- [ ] Event emission parsing from logs
 - [ ] Time manipulation helpers
 - [ ] Account snapshot/rollback for test isolation
 
-### Phase 5: Developer Experience
+### Phase 4: Developer Experience
 - [ ] Procedural macros for test setup
 - [ ] Integration with anchor-client types
 - [ ] Comprehensive examples and documentation
@@ -165,11 +324,20 @@ fn test_anchor_program() {
 | Anchor Integration | Manual | Full | Targeted |
 | Performance | Fastest | Slower | Fast |
 | Flexibility | Full | Limited | Full |
-| Lines of Code | ~200 | ~100 | ~80 |
+| Lines of Code | ~50-200 | ~30-100 | ~10-30 |
+
+## Key Benefits
+
+- **70% Less Code**: Reduce test boilerplate by up to 70%
+- **Readable Tests**: Fluent API makes tests self-documenting
+- **Fast Iteration**: One-line account creation and instruction execution
+- **Type Safety**: Full Rust type safety with Anchor integration
+- **Zero Overhead**: Thin wrapper, no performance impact
+- **Composable**: Works seamlessly with litesvm-token and other tools
 
 ## Contributing
 
-This is an MVP focused on the most painful parts of Anchor + LiteSVM integration. Contributions are welcome, especially for:
+Contributions are welcome! Priority areas:
 - IDL parsing improvements
 - Additional test utilities
 - Documentation and examples

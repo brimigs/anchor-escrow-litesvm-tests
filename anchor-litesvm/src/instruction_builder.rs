@@ -1,8 +1,10 @@
 use crate::instruction::calculate_anchor_discriminator;
+use crate::transaction::{TransactionError, TransactionResult};
 use anchor_lang::AnchorSerialize;
 use solana_program::instruction::{AccountMeta, Instruction};
 use solana_program::pubkey::Pubkey;
 use solana_sdk::signature::{Keypair, Signer};
+use solana_sdk::transaction::Transaction;
 use std::collections::HashMap;
 
 /// Fluent builder for creating Anchor instructions with less boilerplate
@@ -131,6 +133,70 @@ impl InstructionBuilder {
     /// Get all accounts (useful for debugging)
     pub fn accounts(&self) -> Vec<&AccountMeta> {
         self.accounts.iter().map(|(_, meta)| meta).collect()
+    }
+
+    /// Build and execute the instruction with the given signers
+    ///
+    /// This is a convenience method when you have access to a mutable AnchorContext.
+    /// Note: This requires passing the context and signers, as the builder doesn't hold them.
+    ///
+    /// # Example
+    /// ```no_run
+    /// # use anchor_litesvm::{AnchorContext, tuple_args};
+    /// # use litesvm::LiteSVM;
+    /// # use solana_program::pubkey::Pubkey;
+    /// # use solana_sdk::signature::Keypair;
+    /// # let mut ctx = AnchorContext::new(LiteSVM::new(), Pubkey::new_unique());
+    /// # let maker = Keypair::new();
+    /// # let escrow_pda = Pubkey::new_unique();
+    /// # let mint_a = Pubkey::new_unique();
+    /// # let mint_b = Pubkey::new_unique();
+    /// # let maker_ata_a = Pubkey::new_unique();
+    /// # let vault = Pubkey::new_unique();
+    /// let result = ctx.instruction_builder("make")
+    ///     .signer("maker", &maker)
+    ///     .account_mut("escrow", escrow_pda)
+    ///     .account("mint_a", mint_a)
+    ///     .account("mint_b", mint_b)
+    ///     .account_mut("maker_ata_a", maker_ata_a)
+    ///     .account_mut("vault", vault)
+    ///     .system_program()
+    ///     .args(tuple_args((42u64, 500u64, 1000u64)))
+    ///     .execute(&mut ctx, &[&maker])
+    ///     .unwrap();
+    /// ```
+    pub fn execute(
+        self,
+        ctx: &mut crate::AnchorContext,
+        signers: &[&Keypair],
+    ) -> Result<TransactionResult, TransactionError> {
+        // Save the instruction name before consuming self
+        let instruction_name = self.instruction_name.clone();
+
+        let instruction = self
+            .build()
+            .map_err(|e| TransactionError::BuildError(e.to_string()))?;
+
+        if signers.is_empty() {
+            return Err(TransactionError::BuildError(
+                "No signers provided".to_string(),
+            ));
+        }
+
+        let tx = Transaction::new_signed_with_payer(
+            &[instruction],
+            Some(&signers[0].pubkey()),
+            signers,
+            ctx.svm.latest_blockhash(),
+        );
+
+        match ctx.svm.send_transaction(tx) {
+            Ok(result) => Ok(TransactionResult::new(
+                result,
+                Some(instruction_name),
+            )),
+            Err(e) => Err(TransactionError::ExecutionFailed(format!("{:?}", e))),
+        }
     }
 }
 
