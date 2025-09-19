@@ -116,11 +116,20 @@ fn test_anchor_program() {
 - ✅ Type-safe account deserialization
 - ✅ Simple context wrapper maintaining LiteSVM access
 
-### Phase 2: Enhanced Instruction Building
+### Phase 2: Enhanced Instruction Building (In Progress)
+- [ ] Fluent instruction builder API
+- [ ] Simplified account building with automatic AccountMeta
+- [ ] Tuple arguments support (no struct definition needed)
 - [ ] IDL file parsing for automatic account resolution
-- [ ] Instruction builder with method chaining
 - [ ] Automatic signer detection
 - [ ] Better error messages with context
+
+### Phase 2.5: Transaction Execution Helpers
+- [ ] `send_instruction()` - Single line transaction execution
+- [ ] `send_instructions()` - Multiple instructions in one transaction
+- [ ] `execute()` - Combined build and send
+- [ ] `create_funded_keypair()` - Test account helper
+- [ ] Automatic payer detection from signers
 
 ### Phase 3: Testing Utilities
 - [ ] PDA derivation helpers matching Anchor patterns

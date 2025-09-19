@@ -33,11 +33,13 @@
 pub mod account;
 pub mod context;
 pub mod instruction;
+pub mod instruction_builder;
 
 // Re-export main types for convenience
 pub use account::{get_anchor_account, get_anchor_account_unchecked, AccountError};
 pub use context::AnchorContext;
 pub use instruction::{build_anchor_instruction, calculate_anchor_discriminator};
+pub use instruction_builder::{InstructionBuilder, tuple_args, TupleArgs};
 
 // Re-export commonly used external types
 pub use litesvm::LiteSVM;

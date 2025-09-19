@@ -1,5 +1,6 @@
 use crate::account::{get_anchor_account, get_anchor_account_unchecked, AccountError};
 use crate::instruction::build_anchor_instruction;
+use crate::instruction_builder::InstructionBuilder;
 use anchor_lang::{AccountDeserialize, AnchorSerialize};
 use litesvm::LiteSVM;
 use solana_program::instruction::{AccountMeta, Instruction};
@@ -157,6 +158,33 @@ impl AnchorContext {
     /// Useful when testing multiple programs with the same LiteSVM instance
     pub fn set_program_id(&mut self, program_id: Pubkey) {
         self.program_id = program_id;
+    }
+
+    /// Create a new instruction builder with fluent API
+    ///
+    /// This provides a more ergonomic way to build instructions compared to
+    /// manually creating AccountMeta vectors.
+    ///
+    /// # Example
+    /// ```no_run
+    /// # use anchor_litesvm::AnchorContext;
+    /// # use litesvm::LiteSVM;
+    /// # use solana_program::pubkey::Pubkey;
+    /// # use solana_sdk::signature::Keypair;
+    /// # let mut ctx = AnchorContext::new(LiteSVM::new(), Pubkey::new_unique());
+    /// let user = Keypair::new();
+    /// let account = Pubkey::new_unique();
+    ///
+    /// let ix = ctx.instruction_builder("initialize")
+    ///     .signer("user", &user)
+    ///     .account_mut("account", account)
+    ///     .system_program()
+    ///     .args((42u64, 100u64))  // Tuple args - no struct needed!
+    ///     .build()
+    ///     .unwrap();
+    /// ```
+    pub fn instruction_builder(&self, instruction_name: &str) -> InstructionBuilder {
+        InstructionBuilder::new(&self.program_id, instruction_name)
     }
 }
 
