@@ -1,7 +1,8 @@
 [workspace]
 members = [
     "programs/*",
-    "tests"
+    "tests",
+    "anchor-litesvm"
 ]
 resolver = "2"
 

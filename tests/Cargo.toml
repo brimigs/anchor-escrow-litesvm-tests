@@ -19,3 +19,4 @@ solana-client = "2.2.1"
 [dev-dependencies]
 litesvm = "0.6.1"
 litesvm-token = "0.6.1"
+anchor-litesvm = { path = "../anchor-litesvm" }
