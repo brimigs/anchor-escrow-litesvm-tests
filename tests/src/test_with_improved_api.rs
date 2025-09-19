@@ -10,7 +10,7 @@ use solana_program_pack::Pack;
 
 #[test]
 fn test_make_with_improved_builder() {
-    println!("\n🚀 Testing with Improved anchor-litesvm Builder API\n");
+    println!("\nTesting with Improved anchor-litesvm Builder API\n");
 
     // Initialize LiteSVM
     let mut svm = LiteSVM::new();
@@ -73,8 +73,8 @@ fn test_make_with_improved_builder() {
 
     match result {
         Ok(res) => {
-            println!("✅ Transaction succeeded with improved builder API!");
-            println!("\n📝 Transaction logs:");
+            println!("Transaction succeeded with improved builder API!");
+            println!("\nTransaction logs:");
             for log in &res.logs {
                 println!("  {}", log);
             }
@@ -82,19 +82,19 @@ fn test_make_with_improved_builder() {
             // Verify results
             verify_escrow_created(&ctx, &escrow_pda, &vault);
 
-            println!("\n🎉 Test passed with improved anchor-litesvm builder!");
+            println!("\nTest passed with improved anchor-litesvm builder!");
         }
         Err(e) => {
-            panic!("❌ Transaction failed: {:?}", e);
+            panic!("Transaction failed: {:?}", e);
         }
     }
 }
 
 #[test]
 fn test_api_comparison() {
-    println!("\n📊 API Evolution Comparison\n");
+    println!("\nAPI Evolution Comparison\n");
 
-    println!("1️⃣ Original Manual Approach (test_make.rs):");
+    println!("1. Original Manual Approach (test_make.rs):");
     println!("   - Define MakeArgs struct");
     println!("   - Implement BorshSerialize");
     println!("   - Calculate discriminator manually (5 lines)");
@@ -102,21 +102,21 @@ fn test_api_comparison() {
     println!("   - Create AccountMeta vector (9+ lines)");
     println!("   Total: ~25+ lines\n");
 
-    println!("2️⃣ First anchor-litesvm Version:");
+    println!("2. First anchor-litesvm Version:");
     println!("   - Still need MakeArgs struct");
     println!("   - Still need manual AccountMeta vector");
     println!("   - But automatic discriminator");
     println!("   Total: ~15 lines\n");
 
-    println!("3️⃣ NEW Improved Builder API:");
+    println!("3. NEW Improved Builder API:");
     println!("   - NO struct definition needed (use tuples!)");
     println!("   - Fluent account builder");
     println!("   - Named accounts for clarity");
     println!("   - Built-in system/token program helpers");
     println!("   Total: ~10 lines\n");
 
-    println!("💡 Code Reduction: 60% less than original!");
-    println!("💡 Much more readable and maintainable!");
+    println!("Code Reduction: 60% less than original!");
+    println!("Much more readable and maintainable!");
 }
 
 // Helper functions
@@ -204,7 +204,7 @@ fn verify_escrow_created(ctx: &AnchorContext, escrow_pda: &Pubkey, vault: &Pubke
 
     let escrow_account = ctx.svm.get_account(escrow_pda);
     assert!(escrow_account.is_some(), "Escrow account should exist");
-    println!("\n✅ Escrow account created at: {}", escrow_pda);
+    println!("\nEscrow account created at: {}", escrow_pda);
 
     let vault_account = ctx.svm.get_account(vault);
     assert!(vault_account.is_some(), "Vault account should exist");
@@ -212,5 +212,5 @@ fn verify_escrow_created(ctx: &AnchorContext, escrow_pda: &Pubkey, vault: &Pubke
     let vault_data = vault_account.unwrap();
     let vault_state = spl_token::state::Account::unpack(&vault_data.data).unwrap();
     assert_eq!(vault_state.amount, 1_000_000_000);
-    println!("✅ Vault has {} tokens", vault_state.amount as f64 / 1_000_000_000.0);
+    println!("Vault has {} tokens", vault_state.amount as f64 / 1_000_000_000.0);
 }

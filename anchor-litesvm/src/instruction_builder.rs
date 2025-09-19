@@ -138,6 +138,14 @@ impl InstructionBuilder {
 pub struct TupleArgs<T>(pub T);
 
 // Manual implementation of AnchorSerialize for tuple wrappers
+// Empty tuple for instructions with no arguments
+impl AnchorSerialize for TupleArgs<()> {
+    fn serialize<W: std::io::Write>(&self, _writer: &mut W) -> std::io::Result<()> {
+        // No data to serialize for empty tuple
+        Ok(())
+    }
+}
+
 impl<T1: AnchorSerialize> AnchorSerialize for TupleArgs<(T1,)> {
     fn serialize<W: std::io::Write>(&self, writer: &mut W) -> std::io::Result<()> {
         self.0.0.serialize(writer)

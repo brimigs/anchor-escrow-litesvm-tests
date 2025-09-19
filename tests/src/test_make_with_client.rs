@@ -169,8 +169,8 @@ fn test_make_with_anchor_client() {
 
     match result {
         Ok(res) => {
-            println!("✅ Transaction succeeded with anchor_client!");
-            println!("\n📝 Transaction logs:");
+            println!("Transaction succeeded with anchor_client!");
+            println!("\nTransaction logs:");
             for log in &res.logs {
                 println!("  {}", log);
             }
@@ -178,29 +178,29 @@ fn test_make_with_anchor_client() {
             // Verify escrow account was created
             let escrow_account = svm.get_account(&escrow_pda);
             assert!(escrow_account.is_some(), "Escrow account should exist");
-            println!("\n✅ Escrow account created at: {}", escrow_pda);
+            println!("\nEscrow account created at: {}", escrow_pda);
 
             // Verify vault account was created and has tokens
             let vault_account = svm.get_account(&vault);
             assert!(vault_account.is_some(), "Vault account should exist");
-            println!("✅ Vault account created at: {}", vault);
+            println!("Vault account created at: {}", vault);
 
             // Check token balances
             use litesvm_token::spl_token;
             let vault_data = vault_account.unwrap();
             let vault_state = spl_token::state::Account::unpack(&vault_data.data).unwrap();
             assert_eq!(vault_state.amount, 1_000_000_000, "Vault should have 1 token");
-            println!("✅ Vault has {} tokens", vault_state.amount as f64 / 1_000_000_000.0);
+            println!("Vault has {} tokens", vault_state.amount as f64 / 1_000_000_000.0);
 
             let maker_ata_data = svm.get_account(&maker_ata_a).unwrap();
             let maker_ata_state = spl_token::state::Account::unpack(&maker_ata_data.data).unwrap();
             assert_eq!(maker_ata_state.amount, 0, "Maker ATA should have 0 tokens after transfer");
-            println!("✅ Maker ATA has {} tokens (after transfer)", maker_ata_state.amount);
+            println!("Maker ATA has {} tokens (after transfer)", maker_ata_state.amount);
 
-            println!("\n🎉 Make instruction test with anchor_client passed successfully!");
+            println!("\nMake instruction test with anchor_client passed successfully!");
         }
         Err(e) => {
-            panic!("❌ Transaction failed: {:?}", e);
+            panic!("Transaction failed: {:?}", e);
         }
     }
 }

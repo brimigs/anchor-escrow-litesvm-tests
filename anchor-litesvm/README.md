@@ -111,10 +111,10 @@ fn test_anchor_program() {
 ## Roadmap
 
 ### Phase 1: MVP (Current)
-- ✅ Automatic instruction discriminator calculation
-- ✅ Instruction data serialization with Borsh
-- ✅ Type-safe account deserialization
-- ✅ Simple context wrapper maintaining LiteSVM access
+- Automatic instruction discriminator calculation
+- Instruction data serialization with Borsh
+- Type-safe account deserialization
+- Simple context wrapper maintaining LiteSVM access
 
 ### Phase 2: Enhanced Instruction Building (In Progress)
 - [ ] Fluent instruction builder API

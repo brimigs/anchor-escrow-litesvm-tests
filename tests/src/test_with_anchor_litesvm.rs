@@ -28,7 +28,7 @@ impl AnchorSerialize for MakeArgs {
 
 #[test]
 fn test_make_simplified() {
-    println!("\n🚀 Testing with anchor-litesvm - Simplified Version\n");
+    println!("\nTesting with anchor-litesvm - Simplified Version\n");
 
     // Initialize LiteSVM
     let mut svm = LiteSVM::new();
@@ -172,7 +172,7 @@ fn test_make_simplified() {
 
     match result {
         Ok(res) => {
-            println!("✅ Transaction succeeded with anchor-litesvm!");
+            println!("Transaction succeeded with anchor-litesvm!");
             println!("\n📝 Transaction logs:");
             for log in &res.logs {
                 println!("  {}", log);
@@ -181,7 +181,7 @@ fn test_make_simplified() {
             // Verify escrow account
             let escrow_account = ctx.svm.get_account(&escrow_pda);
             assert!(escrow_account.is_some(), "Escrow account should exist");
-            println!("\n✅ Escrow account created at: {}", escrow_pda);
+            println!("\nEscrow account created at: {}", escrow_pda);
 
             // Verify vault account
             let vault_account = ctx.svm.get_account(&vault);
@@ -191,9 +191,9 @@ fn test_make_simplified() {
             let vault_data = vault_account.unwrap();
             let vault_state = spl_token::state::Account::unpack(&vault_data.data).unwrap();
             assert_eq!(vault_state.amount, 1_000_000_000);
-            println!("✅ Vault has {} tokens", vault_state.amount as f64 / 1_000_000_000.0);
+            println!("Vault has {} tokens", vault_state.amount as f64 / 1_000_000_000.0);
 
-            println!("\n🎉 Test passed with anchor-litesvm!");
+            println!("\nTest passed with anchor-litesvm!");
         }
         Err(e) => {
             panic!("❌ Transaction failed: {:?}", e);
@@ -216,9 +216,9 @@ fn test_comparison() {
     println!("\n💡 Reduction: 93% less code for instruction building!");
 
     println!("\nKey benefits:");
-    println!("  ✅ Automatic discriminator calculation");
-    println!("  ✅ Clean, readable API");
-    println!("  ✅ Type-safe with Anchor serialization");
-    println!("  ✅ Direct access to LiteSVM for flexibility");
-    println!("  ✅ PDA calculation helpers");
+    println!("  - Automatic discriminator calculation");
+    println!("  - Clean, readable API");
+    println!("  - Type-safe with Anchor serialization");
+    println!("  - Direct access to LiteSVM for flexibility");
+    println!("  - PDA calculation helpers");
 }
