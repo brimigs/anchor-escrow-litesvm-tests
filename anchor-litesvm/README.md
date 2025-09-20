@@ -1,5 +1,9 @@
 # anchor-litesvm
 
+[![Crates.io](https://img.shields.io/crates/v/anchor-litesvm.svg)](https://crates.io/crates/anchor-litesvm)
+[![Documentation](https://docs.rs/anchor-litesvm/badge.svg)](https://docs.rs/anchor-litesvm)
+[![License](https://img.shields.io/crates/l/anchor-litesvm.svg)](https://github.com/anchor-litesvm/anchor-litesvm#license)
+
 A lightweight testing utility library that bridges Anchor and LiteSVM, dramatically simplifying the process of testing Anchor programs.
 
 ## Problem
@@ -13,6 +17,15 @@ Testing Anchor programs with LiteSVM currently requires significant boilerplate:
 ## Solution
 
 `anchor-litesvm` provides a minimal wrapper around LiteSVM that handles Anchor-specific patterns, reducing test code by 60-70% while maintaining full control and flexibility.
+
+## Installation
+
+Add to your `Cargo.toml`:
+
+```toml
+[dev-dependencies]
+anchor-litesvm = "0.1.0"
+```
 
 ## Quick Start
 
@@ -293,20 +306,14 @@ ctx.assert_token_balance(&vault, 1000);
 - Assertion helpers for cleaner tests
 - Transaction result wrapper with utilities
 
-### Phase 2.5: Future Enhancements
-
-### Phase 3: Advanced Features (In Progress)
+### Phase 3: Future Enhancements
 - [ ] IDL file parsing for automatic account resolution
 - [ ] Automatic signer detection from account types
 - [ ] Event emission parsing from logs
 - [ ] Time manipulation helpers
 - [ ] Account snapshot/rollback for test isolation
-
-### Phase 4: Developer Experience
 - [ ] Procedural macros for test setup
 - [ ] Integration with anchor-client types
-- [ ] Comprehensive examples and documentation
-- [ ] Performance optimizations
 
 ## Design Principles
 
@@ -345,4 +352,4 @@ Contributions are welcome! Priority areas:
 
 ## License
 
-MIT OR Apache-2.0
+MIT

@@ -10,6 +10,18 @@ use solana_sdk::transaction::Transaction;
 use std::fmt;
 
 /// Wrapper around LiteSVM's TransactionMetadata with helper methods for testing
+///
+/// This struct provides convenient methods for analyzing transaction results,
+/// including log inspection, compute unit tracking, and success assertions.
+///
+/// # Example
+///
+/// ```ignore
+/// let result = ctx.send_instruction(ix, &[&signer])?;
+/// result.assert_success();
+/// assert!(result.has_log("Transfer complete"));
+/// println!("Used {} compute units", result.compute_units());
+/// ```
 pub struct TransactionResult {
     inner: TransactionMetadata,
     instruction_name: Option<String>,
@@ -17,6 +29,11 @@ pub struct TransactionResult {
 
 impl TransactionResult {
     /// Create a new TransactionResult wrapper
+    ///
+    /// # Arguments
+    ///
+    /// * `result` - The transaction metadata from LiteSVM
+    /// * `instruction_name` - Optional name of the instruction for debugging
     pub fn new(result: TransactionMetadata, instruction_name: Option<String>) -> Self {
         Self {
             inner: result,
@@ -25,6 +42,16 @@ impl TransactionResult {
     }
 
     /// Assert that the transaction succeeded, panic with logs if it failed
+    ///
+    /// # Returns
+    ///
+    /// Returns self for chaining
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// result.assert_success();
+    /// ```
     pub fn assert_success(&self) -> &Self {
         // TransactionResult from LiteSVM is returned on success, so this is always successful
         // if we have a result. Errors are returned as Err() from send_transaction
@@ -32,11 +59,23 @@ impl TransactionResult {
     }
 
     /// Get the transaction logs
+    ///
+    /// # Returns
+    ///
+    /// Returns a slice of all log messages from the transaction
     pub fn logs(&self) -> &[String] {
         &self.inner.logs
     }
 
     /// Get specific log lines that match a pattern
+    ///
+    /// # Arguments
+    ///
+    /// * `pattern` - The substring to search for in logs
+    ///
+    /// # Returns
+    ///
+    /// Returns a vector of log messages that contain the pattern
     pub fn find_logs(&self, pattern: &str) -> Vec<&String> {
         self.inner
             .logs
@@ -46,11 +85,40 @@ impl TransactionResult {
     }
 
     /// Check if a specific log message exists
+    ///
+    /// # Arguments
+    ///
+    /// * `pattern` - The substring to search for in logs
+    ///
+    /// # Returns
+    ///
+    /// Returns true if any log contains the pattern
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// if result.has_log("Error") {
+    ///     panic!("Transaction had an error!");
+    /// }
+    /// ```
     pub fn has_log(&self, pattern: &str) -> bool {
         self.inner.logs.iter().any(|log| log.contains(pattern))
     }
 
     /// Get the compute units consumed
+    ///
+    /// Parses the compute units from the transaction logs.
+    ///
+    /// # Returns
+    ///
+    /// Returns the number of compute units consumed, or 0 if not found
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// let cu = result.compute_units();
+    /// assert!(cu < 200_000, "Used too many compute units: {}", cu);
+    /// ```
     pub fn compute_units(&self) -> u64 {
         // Parse compute units from logs
         for log in &self.inner.logs {
@@ -69,6 +137,8 @@ impl TransactionResult {
     }
 
     /// Print transaction logs (useful for debugging)
+    ///
+    /// Prints all transaction logs to stdout with formatting.
     pub fn print_logs(&self) {
         if let Some(ref name) = self.instruction_name {
             println!("Transaction logs for '{}':", name);

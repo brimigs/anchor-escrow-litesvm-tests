@@ -2,10 +2,11 @@
 name = "anchor-litesvm"
 version = "0.1.0"
 edition = "2021"
-authors = ["Your Name"]
+authors = ["Anchor LiteSVM Contributors"]
 description = "Anchor testing utilities for LiteSVM - simplifying Anchor program testing"
-license = "MIT OR Apache-2.0"
-repository = "https://github.com/yourusername/anchor-litesvm"
+documentation = "https://docs.rs/anchor-litesvm"
+license = "MIT"
+repository = "https://github.com/anchor-litesvm/anchor-litesvm"
 keywords = ["solana", "anchor", "litesvm", "testing", "blockchain"]
 categories = ["development-tools::testing", "cryptography::cryptocurrencies"]
 

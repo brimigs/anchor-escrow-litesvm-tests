@@ -11,6 +11,25 @@ use std::collections::HashMap;
 ///
 /// This builder provides a more ergonomic API for constructing instructions,
 /// handling account metadata, and managing signers automatically.
+///
+/// # Example
+///
+/// ```ignore
+/// use anchor_litesvm::{AnchorContext, tuple_args};
+/// use solana_sdk::signature::{Keypair, Signer};
+///
+/// let mut ctx = /* ... */;
+/// let user = Keypair::new();
+/// let account = Pubkey::new_unique();
+///
+/// let result = ctx.instruction_builder("transfer")
+///     .signer("user", &user)
+///     .account_mut("from", from_account)
+///     .account_mut("to", to_account)
+///     .token_program()
+///     .args(tuple_args((amount,)))
+///     .execute(&mut ctx, &[&user])?;
+/// ```
 pub struct InstructionBuilder {
     program_id: Pubkey,
     instruction_name: String,
@@ -21,6 +40,11 @@ pub struct InstructionBuilder {
 
 impl InstructionBuilder {
     /// Create a new instruction builder
+    ///
+    /// # Arguments
+    ///
+    /// * `program_id` - The Anchor program ID
+    /// * `instruction_name` - The name of the instruction (used for discriminator)
     pub fn new(program_id: &Pubkey, instruction_name: &str) -> Self {
         Self {
             program_id: *program_id,
@@ -32,6 +56,17 @@ impl InstructionBuilder {
     }
 
     /// Add a read-only account
+    ///
+    /// # Arguments
+    ///
+    /// * `name` - A descriptive name for the account (for debugging)
+    /// * `pubkey` - The public key of the account
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// builder.account("mint", mint_pubkey)
+    /// ```
     pub fn account(mut self, name: &str, pubkey: Pubkey) -> Self {
         let index = self.accounts.len();
         self.accounts.push((
@@ -43,6 +78,17 @@ impl InstructionBuilder {
     }
 
     /// Add a writable account
+    ///
+    /// # Arguments
+    ///
+    /// * `name` - A descriptive name for the account (for debugging)
+    /// * `pubkey` - The public key of the account
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// builder.account_mut("token_account", token_account_pubkey)
+    /// ```
     pub fn account_mut(mut self, name: &str, pubkey: Pubkey) -> Self {
         let index = self.accounts.len();
         self.accounts.push((
@@ -54,6 +100,17 @@ impl InstructionBuilder {
     }
 
     /// Add a signer account (automatically marked as writable)
+    ///
+    /// # Arguments
+    ///
+    /// * `name` - A descriptive name for the account (for debugging)
+    /// * `keypair` - The keypair that will sign the transaction
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// builder.signer("user", &user_keypair)
+    /// ```
     pub fn signer(mut self, name: &str, keypair: &Keypair) -> Self {
         let index = self.accounts.len();
         self.accounts.push((
@@ -65,6 +122,13 @@ impl InstructionBuilder {
     }
 
     /// Add a read-only signer account
+    ///
+    /// Use this for signers that don't need write access to their own account.
+    ///
+    /// # Arguments
+    ///
+    /// * `name` - A descriptive name for the account
+    /// * `keypair` - The keypair that will sign the transaction
     pub fn signer_readonly(mut self, name: &str, keypair: &Keypair) -> Self {
         let index = self.accounts.len();
         self.accounts.push((
@@ -76,26 +140,48 @@ impl InstructionBuilder {
     }
 
     /// Add the system program
+    ///
+    /// Convenience method that adds the system program to the instruction accounts.
     pub fn system_program(self) -> Self {
         self.account("system_program", solana_program::system_program::id())
     }
 
     /// Add the token program
+    ///
+    /// Convenience method that adds the SPL Token program to the instruction accounts.
     pub fn token_program(self) -> Self {
         self.account("token_program", spl_token::id())
     }
 
     /// Add the associated token program
+    ///
+    /// Convenience method that adds the Associated Token Account program.
     pub fn associated_token_program(self) -> Self {
         self.account("associated_token_program", spl_associated_token_account::id())
     }
 
     /// Add the rent sysvar
+    ///
+    /// Convenience method that adds the rent sysvar account.
     pub fn rent_sysvar(self) -> Self {
         self.account("rent", solana_program::sysvar::rent::id())
     }
 
     /// Set instruction arguments using AnchorSerialize
+    ///
+    /// This method automatically calculates the discriminator and serializes the arguments.
+    ///
+    /// # Arguments
+    ///
+    /// * `args` - The instruction arguments (use `tuple_args()` to avoid struct definitions)
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// use anchor_litesvm::tuple_args;
+    ///
+    /// builder.args(tuple_args((amount, recipient)))
+    /// ```
     pub fn args<T: AnchorSerialize>(mut self, args: T) -> Self {
         let discriminator = calculate_anchor_discriminator(&self.instruction_name);
         self.data = discriminator.to_vec();
@@ -105,6 +191,16 @@ impl InstructionBuilder {
     }
 
     /// Build the instruction
+    ///
+    /// Finalizes the builder and returns a Solana instruction.
+    ///
+    /// # Returns
+    ///
+    /// Returns the built instruction or an error if args were not set.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if `.args()` was not called before building.
     pub fn build(self) -> Result<Instruction, Box<dyn std::error::Error>> {
         if self.data.is_empty() {
             return Err("No instruction data provided. Call .args() before .build()".into());
@@ -201,6 +297,21 @@ impl InstructionBuilder {
 }
 
 /// Wrapper type for tuple arguments to implement AnchorSerialize
+///
+/// This allows you to pass tuple arguments directly to instructions
+/// without defining separate structs for each instruction.
+///
+/// # Example
+///
+/// ```ignore
+/// use anchor_litesvm::tuple_args;
+///
+/// // Instead of defining a struct:
+/// // struct TransferArgs { amount: u64, recipient: Pubkey }
+///
+/// // You can use tuple args:
+/// builder.args(tuple_args((amount, recipient)))
+/// ```
 pub struct TupleArgs<T>(pub T);
 
 // Manual implementation of AnchorSerialize for tuple wrappers
@@ -243,6 +354,24 @@ impl<T1: AnchorSerialize, T2: AnchorSerialize, T3: AnchorSerialize, T4: AnchorSe
 }
 
 /// Convenience function to wrap tuples for serialization
+///
+/// This helper function creates a `TupleArgs` wrapper that implements `AnchorSerialize`
+/// for tuple types, allowing you to pass instruction arguments without defining structs.
+///
+/// # Example
+///
+/// ```ignore
+/// use anchor_litesvm::tuple_args;
+///
+/// // For no arguments
+/// builder.args(tuple_args(()))
+///
+/// // For single argument
+/// builder.args(tuple_args((amount,)))
+///
+/// // For multiple arguments
+/// builder.args(tuple_args((amount, recipient, memo)))
+/// ```
 pub fn tuple_args<T>(args: T) -> TupleArgs<T> {
     TupleArgs(args)
 }
